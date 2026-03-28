@@ -76,38 +76,130 @@ All content is generated specifically for your target language using Claude Sonn
 
 ---
 
-## Quick Start
+## Project Scope
 
-### Prerequisites
+Immerse48 is a **solo-use, locally-run** language learning app that generates personalized content via Claude AI. It is currently designed for individual use on a single machine.
 
-- [Node.js](https://nodejs.org/) v18+
-- An [Anthropic API key](https://console.anthropic.com/settings/keys)
+**What it does today:**
+- Generates complete learning material (word lists, sentence structures, roadmap, script info) for any language on first setup
+- Provides 9 interactive learning tools (flashcards, speaking practice, AI journal, conversation simulator, etc.)
+- Caches all LLM responses in SQLite so repeated requests cost $0
+- Stores all user progress in browser localStorage
 
-### Setup
+**What it does NOT do yet:**
+- No user authentication or multi-user support
+- No cloud database — all data lives locally (SQLite + localStorage)
+- No deployment pipeline — runs only on `localhost`
+- No mobile-responsive layout optimization
+- No offline mode (requires live Anthropic API access for new content)
+
+---
+
+## Requirements
+
+### System Requirements
+
+| Requirement | Details |
+|---|---|
+| **Node.js** | v18 or higher ([download](https://nodejs.org/)) |
+| **npm** | v9+ (ships with Node.js) |
+| **OS** | macOS, Linux, or Windows |
+| **RAM** | 512 MB+ (SQLite + Express are lightweight) |
+| **Disk** | ~200 MB (node_modules + cache database) |
+| **Browser** | Any modern browser (Chrome, Firefox, Safari, Edge) |
+| **Internet** | Required for Anthropic API calls |
+
+### Accounts & Keys
+
+- **Anthropic API key** — get one at [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys). You need a funded account (see [API Costs](#api-costs) below).
+
+### Dependencies
+
+**Production:**
+
+| Package | Version | Purpose |
+|---|---|---|
+| `react` | ^19.2.4 | UI framework |
+| `react-dom` | ^19.2.4 | React DOM renderer |
+| `react-router-dom` | ^7.13.2 | Routing (imported, conditional rendering used) |
+| `express` | ^5.2.1 | Backend API server |
+| `@anthropic-ai/sdk` | ^0.80.0 | Claude API client |
+| `better-sqlite3` | ^12.8.0 | SQLite database (LLM response cache) |
+| `cors` | ^2.8.6 | Cross-origin request handling |
+| `dotenv` | ^17.3.1 | Environment variable loading |
+| `concurrently` | ^9.2.1 | Run frontend + backend in parallel |
+| `lucide-react` | ^1.7.0 | Icon library |
+| `recharts` | ^3.8.1 | Charts for progress dashboard |
+| `uuid` | ^13.0.0 | Unique ID generation |
+
+**Dev:**
+
+| Package | Version | Purpose |
+|---|---|---|
+| `vite` | ^8.0.1 | Build tool + dev server |
+| `@vitejs/plugin-react` | ^6.0.1 | React Fast Refresh for Vite |
+| `eslint` | ^9.39.4 | Code linting |
+| `eslint-plugin-react-hooks` | ^7.0.1 | React hooks lint rules |
+| `eslint-plugin-react-refresh` | ^0.5.2 | Fast refresh lint rules |
+| `globals` | ^17.4.0 | Global variable definitions for ESLint |
+| `@types/react` | ^19.2.14 | React type definitions |
+| `@types/react-dom` | ^19.2.3 | React DOM type definitions |
+
+> **Note:** `better-sqlite3` is a native module — it compiles C++ during `npm install`. If you hit build errors, ensure you have a C/C++ toolchain installed (Xcode CLI tools on macOS, `build-essential` on Ubuntu, Visual Studio Build Tools on Windows).
+
+---
+
+## Quick Start — Replicating the Project
+
+### 1. Clone & Install
 
 ```bash
-# 1. Clone the repository
+# Clone the repository
 git clone https://github.com/YOUR_USERNAME/Immerse48.git
 cd Immerse48
 
-# 2. Install dependencies
+# Install all dependencies (this compiles better-sqlite3 natively)
 npm install
+```
 
-# 3. Start the app (runs both frontend + backend)
+### 2. (Optional) Configure Environment
+
+Create a `.env` file in the project root:
+
+```env
+PORT=3001          # Backend server port (default: 3001)
+```
+
+The Anthropic API key is entered in the browser UI at runtime and sent per-request — it is **never stored on disk or in environment variables**.
+
+### 3. Run the App
+
+```bash
+# Start both frontend (Vite) and backend (Express) concurrently
 npm run dev
 ```
 
-Open **http://localhost:5173** → enter API key → select language → start learning.
+This runs:
+- **Frontend:** Vite dev server at `http://localhost:5173` (with HMR)
+- **Backend:** Express API at `http://localhost:3001`
 
-### Environment Variables (optional)
+### 4. Use the App
 
-Create a `.env` file in the root:
+1. Open **http://localhost:5173** in your browser
+2. Enter your Anthropic API key
+3. Select a target language (or type any language)
+4. Wait for initial content generation (~30s, cached after first run)
+5. Start learning
 
-```env
-PORT=3001
+### Other Commands
+
+```bash
+npm run server    # Backend only
+npm run client    # Frontend only (needs backend running separately)
+npm run build     # Production build (frontend → dist/)
+npm run preview   # Preview production build
+npm run lint      # Run ESLint
 ```
-
-The API key is entered in the browser UI and sent per-request — it's never stored on disk.
 
 ---
 
@@ -181,6 +273,46 @@ Immerse48/
 ├── vite.config.js
 └── README.md
 ```
+
+---
+
+## TODO — Production Roadmap
+
+This app currently runs locally. Here's what's needed to move it to production:
+
+### Phase 1: Production-Ready Backend
+- [ ] **Environment-based config** — Move API base URL out of hardcoded `localhost:3001` in `src/utils/api.js`; use `VITE_API_URL` env var
+- [ ] **Server-side API key management** — Store Anthropic key in `.env` server-side instead of passing from browser per-request (security risk in production)
+- [ ] **Rate limiting** — Add express-rate-limit to prevent API abuse
+- [ ] **Input validation & sanitization** — Validate all request bodies server-side
+- [ ] **Error handling** — Add global Express error handler, structured error responses
+- [ ] **Logging** — Add structured logging (winston/pino) instead of `console.log`
+- [ ] **Health check endpoint** — Add `/api/health` for monitoring
+
+### Phase 2: Authentication & Multi-User
+- [ ] **User authentication** — Add auth (e.g., Clerk, Auth0, or Supabase Auth)
+- [ ] **Database migration** — Move user progress from localStorage to a server-side database (PostgreSQL/Supabase)
+- [ ] **Per-user data isolation** — Associate cached content and progress with user accounts
+- [ ] **Session management** — JWT or session-based auth tokens
+
+### Phase 3: Deployment
+- [ ] **Dockerize** — Create `Dockerfile` + `docker-compose.yml` for consistent deployment
+- [ ] **CI/CD pipeline** — GitHub Actions for lint, build, test, deploy
+- [ ] **Frontend hosting** — Deploy `vite build` output to Vercel/Netlify/Cloudflare Pages
+- [ ] **Backend hosting** — Deploy Express server to Railway/Render/Fly.io/AWS
+- [ ] **Database hosting** — Migrate from SQLite to hosted PostgreSQL (SQLite doesn't scale for concurrent users)
+- [ ] **HTTPS** — Ensure TLS everywhere (handled by most hosting platforms)
+- [ ] **CORS lockdown** — Restrict CORS to production domain only (currently allows all origins)
+- [ ] **Environment separation** — Separate dev/staging/production configs
+
+### Phase 4: Polish & Scale
+- [ ] **Mobile responsive design** — Optimize layouts for phone/tablet
+- [ ] **PWA support** — Service worker for offline access to cached content
+- [ ] **Tests** — Unit tests (Vitest), integration tests, E2E tests (Playwright)
+- [ ] **CDN for static assets** — Serve fonts/icons from CDN instead of Google Fonts preconnect
+- [ ] **API cost controls** — Per-user spending limits, usage dashboard
+- [ ] **Content pre-generation** — Pre-cache popular languages so new users don't wait
+- [ ] **WebSocket for conversation** — Replace polling with real-time streaming for chat features
 
 ---
 
